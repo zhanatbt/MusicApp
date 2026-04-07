@@ -1,0 +1,33 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>WinExe</OutputType>
+        <TargetFramework>net10.0-windows</TargetFramework>
+        <Nullable>enable</Nullable>
+        <UseWindowsForms>true</UseWindowsForms>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <RootNamespace>MusicApp</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\MusicApp.BLL\MusicApp.BLL.csproj" />
+      <ProjectReference Include="..\MusicApp.DAL\MusicApp.DAL.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="BCrypt.Net-Next" Version="4.1.0" />
+      <PackageReference Include="HiNetCloud.AxInterop.WMPLib" Version="20.7.2.10" />
+      <PackageReference Include="HiNetCloud.Interop.WMPLib" Version="20.7.2.10" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.5" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.5">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      </PackageReference>
+      <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.5" />
+      <PackageReference Include="WMPLib" Version="1.0.0">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      </PackageReference>
+    </ItemGroup>
+
+</Project>
