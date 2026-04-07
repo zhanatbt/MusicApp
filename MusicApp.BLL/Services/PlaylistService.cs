@@ -9,12 +9,12 @@ using MusicApp.DAL.Models;
 
 namespace MusicApp.BLL.Services
 {
-    public class PlaylistService : IPlaylistService
+        public class PlaylistService : IPlaylistService
     {
         private readonly MusicAppDbContext _db;
-
+ 
         public PlaylistService(MusicAppDbContext db) => _db = db;
-
+ 
         public List<PlaylistDto> GetByUser(int userId) =>
             _db.Playlists
                .AsNoTracking()
@@ -26,7 +26,10 @@ namespace MusicApp.BLL.Services
                    UserId     = p.UserId,
                    TrackCount = p.PlaylistTracks.Count
                }).ToList();
-
+ 
+        /// <summary>
+        /// Треки без PlaylistTrackId (обратная совместимость).
+        /// </summary>
         public List<TrackDto> GetTracks(int playlistId) =>
             _db.PlaylistTracks
                .AsNoTracking()
@@ -40,37 +43,57 @@ namespace MusicApp.BLL.Services
                    DurationSeconds = pt.Track.DurationSeconds,
                    FilePath        = pt.Track.FilePath,
                    ArtistName      = pt.Track.Artist.Name,
-                   AlbumTitle      = pt.Track.Album.Title,
+                   AlbumTitle      = pt.Track.Album != null ? pt.Track.Album.Title : null,
                    ArtistId        = pt.Track.ArtistId,
                    AlbumId         = pt.Track.AlbumId
                }).ToList();
-
+ 
+        /// <summary>
+        /// ИСПРАВЛЕНИЕ: возвращает PlaylistTrackId вместе с данными трека.
+        /// Теперь UI может удалять треки через сервис, не обращаясь к DbContext напрямую.
+        /// </summary>
+        public List<PlaylistTrackItemDto> GetTracksWithIds(int playlistId) =>
+            _db.PlaylistTracks
+               .AsNoTracking()
+               .Where(pt => pt.PlaylistId == playlistId)
+               .OrderBy(pt => pt.Position)
+               .Select(pt => new PlaylistTrackItemDto
+               {
+                   PlaylistTrackId = pt.PlaylistTrackId,
+                   Position        = pt.Position,
+                   TrackId         = pt.Track.TrackId,
+                   Title           = pt.Track.Title,
+                   DurationSeconds = pt.Track.DurationSeconds,
+                   FilePath        = pt.Track.FilePath,
+                   ArtistName      = pt.Track.Artist.Name,
+                   AlbumTitle      = pt.Track.Album != null ? pt.Track.Album.Title : null
+               }).ToList();
+ 
         public void Create(int userId, string name)
         {
-            // DB unique index enforces one name per user — EF catches the exception
             if (_db.Playlists.Any(p => p.UserId == userId && p.Name == name))
                 throw new Exception($"Плейлист с именем «{name}» уже существует.");
-
+ 
             _db.Playlists.Add(new Playlist { UserId = userId, Name = name });
             _db.SaveChanges();
         }
-
+ 
         public void Delete(int playlistId, int userId)
         {
-            var pl = _db.Playlists.FirstOrDefault(p => p.PlaylistId == playlistId && p.UserId == userId)
+            var pl = _db.Playlists
+                         .FirstOrDefault(p => p.PlaylistId == playlistId && p.UserId == userId)
                      ?? throw new Exception("Плейлист не найден или нет прав.");
             _db.Playlists.Remove(pl);
             _db.SaveChanges();
         }
-
+ 
         public void AddTrack(int playlistId, int trackId)
         {
-            int nextPos = _db.PlaylistTracks
-                             .Where(pt => pt.PlaylistId == playlistId)
-                             .Select(pt => (int?)pt.Position)
-                             .Max() ?? 0;
-            nextPos++;
-
+            int nextPos = (_db.PlaylistTracks
+                              .Where(pt => pt.PlaylistId == playlistId)
+                              .Select(pt => (int?)pt.Position)
+                              .Max() ?? 0) + 1;
+ 
             _db.PlaylistTracks.Add(new PlaylistTrack
             {
                 PlaylistId = playlistId,
@@ -79,13 +102,13 @@ namespace MusicApp.BLL.Services
             });
             _db.SaveChanges();
         }
-
+ 
         public void RemoveTrack(int playlistTrackId)
         {
             var pt = _db.PlaylistTracks.Find(playlistTrackId);
             if (pt != null) { _db.PlaylistTracks.Remove(pt); _db.SaveChanges(); }
         }
-
+ 
         public void MoveTrack(int playlistTrackId, int newPosition)
         {
             var pt = _db.PlaylistTracks.Find(playlistTrackId)

@@ -24,7 +24,17 @@ namespace MusicApp.BLL.Interfaces
     public interface IPlaylistService
     {
         List<PlaylistDto> GetByUser(int userId);
+ 
+        /// <summary>
+        /// Возвращает треки плейлиста БЕЗ PlaylistTrackId (для отображения в общем списке).
+        /// </summary>
         List<TrackDto> GetTracks(int playlistId);
+ 
+        /// <summary>
+        /// Возвращает треки плейлиста С PlaylistTrackId — нужно для кнопки «Удалить из плейлиста».
+        /// </summary>
+        List<PlaylistTrackItemDto> GetTracksWithIds(int playlistId);
+ 
         void Create(int userId, string name);
         void Delete(int playlistId, int userId);
         void AddTrack(int playlistId, int trackId);

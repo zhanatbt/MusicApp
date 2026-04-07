@@ -46,4 +46,19 @@ namespace MusicApp.BLL.DTOs
         public string Username { get; set; }
         public string Role { get; set; }
     }
+    
+    public class PlaylistTrackItemDto
+    {
+        public int PlaylistTrackId  { get; set; }   // нужен для RemoveTrack
+        public int Position         { get; set; }
+        public int TrackId          { get; set; }
+        public string Title         { get; set; }
+        public string ArtistName    { get; set; }
+        public string AlbumTitle    { get; set; }
+        public int DurationSeconds  { get; set; }
+        public string FilePath      { get; set; }
+ 
+        public string DurationFormatted =>
+            $"{DurationSeconds / 60}:{DurationSeconds % 60:D2}";
+    }
 }

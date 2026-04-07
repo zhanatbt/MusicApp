@@ -9,40 +9,52 @@ using MusicApp.DAL.Models;
 
 namespace MusicApp.BLL.Services
 {
-    public class TrackService : ITrackService
+        public class TrackService : ITrackService
     {
         private readonly MusicAppDbContext _db;
-
+ 
         public TrackService(MusicAppDbContext db) => _db = db;
-
+ 
         private IQueryable<Track> BaseQuery() =>
-            _db.Tracks.Include(t => t.Artist).Include(t => t.Album);
-
+            _db.Tracks
+               .Include(t => t.Artist)
+               .Include(t => t.Album);
+ 
         private static TrackDto ToDto(Track t) => new TrackDto
         {
-            TrackId       = t.TrackId,
-            Title         = t.Title,
-            Genre         = t.Genre,
+            TrackId         = t.TrackId,
+            Title           = t.Title,
+            Genre           = t.Genre,
             DurationSeconds = t.DurationSeconds,
-            FilePath      = t.FilePath,
-            ArtistName    = t.Artist?.Name,
-            AlbumTitle    = t.Album?.Title,
-            ArtistId      = t.ArtistId,
-            AlbumId       = t.AlbumId
+            FilePath        = t.FilePath,
+            ArtistName      = t.Artist?.Name,
+            AlbumTitle      = t.Album?.Title,
+            ArtistId        = t.ArtistId,
+            AlbumId         = t.AlbumId
         };
-
+ 
         public List<TrackDto> GetAll() =>
-            BaseQuery().AsNoTracking().Select(t => ToDto(t)).ToList();  // LINQ — parameterized
-
-        public TrackDto GetById(int id) =>
-            ToDto(BaseQuery().AsNoTracking().FirstOrDefault(t => t.TrackId == id));
-
-        // All filters via LINQ — EF generates parameterized SQL automatically
+            BaseQuery()
+                .AsNoTracking()
+                .AsEnumerable()   // <-- материализуем до вызова ToDto
+                .Select(ToDto)
+                .ToList();
+ 
+        public TrackDto GetById(int id)
+        {
+            var track = BaseQuery()
+                .AsNoTracking()
+                .FirstOrDefault(t => t.TrackId == id);
+ 
+            return track == null ? null : ToDto(track);
+        }
+ 
+        // Все фильтры через LINQ — EF генерирует параметризованный SQL (нет SQL-инъекций)
         public List<TrackDto> Search(string title = null, string artist = null,
-                                     string album = null, string genre = null)
+                                     string album = null,  string genre = null)
         {
             var q = BaseQuery().AsNoTracking();
-
+ 
             if (!string.IsNullOrWhiteSpace(title))
                 q = q.Where(t => t.Title.Contains(title));
             if (!string.IsNullOrWhiteSpace(artist))
@@ -51,10 +63,12 @@ namespace MusicApp.BLL.Services
                 q = q.Where(t => t.Album.Title.Contains(album));
             if (!string.IsNullOrWhiteSpace(genre))
                 q = q.Where(t => t.Genre.Contains(genre));
-
-            return q.Select(t => ToDto(t)).ToList();
+ 
+            // AsEnumerable() после фильтрации — фильтры применяются в БД,
+            // а ToDto() — уже в памяти
+            return q.AsEnumerable().Select(ToDto).ToList();
         }
-
+ 
         public void Add(TrackDto dto)
         {
             _db.Tracks.Add(new Track
@@ -68,7 +82,7 @@ namespace MusicApp.BLL.Services
             });
             _db.SaveChanges();
         }
-
+ 
         public void Update(TrackDto dto)
         {
             var track = _db.Tracks.Find(dto.TrackId)
@@ -81,15 +95,16 @@ namespace MusicApp.BLL.Services
             track.AlbumId         = dto.AlbumId;
             _db.SaveChanges();
         }
-
+ 
         public void Delete(int id)
         {
             var track = _db.Tracks.Find(id);
             if (track != null) { _db.Tracks.Remove(track); _db.SaveChanges(); }
         }
-
+ 
         public List<string> GetAllGenres() =>
-            _db.Tracks.AsNoTracking()
+            _db.Tracks
+               .AsNoTracking()
                .Where(t => t.Genre != null)
                .Select(t => t.Genre)
                .Distinct()
