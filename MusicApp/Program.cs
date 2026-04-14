@@ -46,7 +46,8 @@ namespace MusicApp
             collection.AddTransient<LoginForm>();
             collection.AddTransient<MainForm>();
             collection.AddTransient<AdminForm>();
- 
+            collection.AddTransient<PlayerForm>();
+
             Services = collection.BuildServiceProvider();
             // ─────────────────────────────────────────────────────────────
  
