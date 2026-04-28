@@ -24,7 +24,7 @@ namespace MusicApp.Forms
         private void SetupPlayer()
         {
             this.Text = "Music Player";
-            this.Size = new Size(540, 300);
+            this.Size = new Size(560, 320);
             this.FormBorderStyle = FormBorderStyle.FixedSingle;
             this.MaximizeBox = false;
             this.StartPosition = FormStartPosition.CenterParent;
@@ -32,7 +32,7 @@ namespace MusicApp.Forms
             this.ForeColor = Color.White;
             this.Font = new Font("Segoe UI", 10f);
 
-            // Название трека
+            // Название трека (поддерживает несколько исполнителей)
             lblNowPlaying = new Label
             {
                 Text = "Трек не выбран",
@@ -41,7 +41,7 @@ namespace MusicApp.Forms
                 AutoSize = false,
                 TextAlign = ContentAlignment.MiddleCenter,
                 Dock = DockStyle.Top,
-                Height = 55
+                Height = 60
             };
 
             // Прогресс-бар
@@ -75,8 +75,21 @@ namespace MusicApp.Forms
                 Padding = new Padding(15, 10, 15, 10)
             };
 
-            var btnPlayPause = new Button { Text = "▶", Width = 80, Height = 55, Font = new Font("Segoe UI", 20f) };
-            var btnStop = new Button { Text = "⏹", Width = 60, Height = 55, Font = new Font("Segoe UI", 16f) };
+            var btnPlayPause = new Button
+            {
+                Text = "▶",
+                Width = 80,
+                Height = 55,
+                Font = new Font("Segoe UI", 20f)
+            };
+
+            var btnStop = new Button
+            {
+                Text = "⏹",
+                Width = 60,
+                Height = 55,
+                Font = new Font("Segoe UI", 16f)
+            };
 
             btnPlayPause.Click += BtnPlayPause_Click;
             btnStop.Click += (s, e) => Stop();
@@ -91,25 +104,46 @@ namespace MusicApp.Forms
                 Height = 45,
                 Padding = new Padding(15, 5, 15, 5)
             };
-            volumePanel.Controls.Add(new Label { Text = "Громкость:", Width = 80, Height = 25, TextAlign = ContentAlignment.MiddleLeft });
 
-            var trackVolume = new TrackBar { Width = 280, Minimum = 0, Maximum = 100, Value = 80 };
-            trackVolume.Scroll += (s, e) => { if (_waveOut != null) _waveOut.Volume = trackVolume.Value / 100f; };
+            volumePanel.Controls.Add(new Label
+            {
+                Text = "Громкость:",
+                Width = 80,
+                Height = 25,
+                TextAlign = ContentAlignment.MiddleLeft
+            });
+
+            var trackVolume = new TrackBar
+            {
+                Width = 280,
+                Minimum = 0,
+                Maximum = 100,
+                Value = 80
+            };
+            trackVolume.Scroll += (s, e) =>
+            {
+                if (_waveOut != null)
+                    _waveOut.Volume = trackVolume.Value / 100f;
+            };
+
             volumePanel.Controls.Add(trackVolume);
 
-            // Добавляем всё на форму в правильном порядке
+            // Добавляем элементы в правильном порядке
             this.Controls.Add(volumePanel);
             this.Controls.Add(btnPanel);
             this.Controls.Add(lblTime);
             this.Controls.Add(trackProgress);
             this.Controls.Add(lblNowPlaying);
 
-            // Таймер
+            // Таймер обновления прогресса
             _timer = new System.Windows.Forms.Timer { Interval = 400 };
             _timer.Tick += Timer_Tick;
         }
 
-        public void Play(string filePath, string title, string artist)
+        /// <summary>
+        /// Запуск воспроизведения
+        /// </summary>
+        public void Play(string filePath, string title, string artistDisplay)
         {
             Stop();
 
@@ -120,13 +154,17 @@ namespace MusicApp.Forms
                 _waveOut.Init(_audioFileReader);
                 _waveOut.Play();
 
-                lblNowPlaying.Text = $"{artist} — {title}";
+                lblNowPlaying.Text = $"{artistDisplay} — {title}";
                 this.Text = $"Сейчас играет — {title}";
+
                 _timer.Start();
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Ошибка воспроизведения:\n" + ex.Message, "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Ошибка воспроизведения:\n" + ex.Message,
+                               "Ошибка",
+                               MessageBoxButtons.OK,
+                               MessageBoxIcon.Error);
             }
         }
 
@@ -136,6 +174,7 @@ namespace MusicApp.Forms
             _waveOut?.Stop();
             _waveOut?.Dispose();
             _audioFileReader?.Dispose();
+
             _waveOut = null;
             _audioFileReader = null;
 

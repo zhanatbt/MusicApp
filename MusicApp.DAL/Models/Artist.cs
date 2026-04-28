@@ -8,7 +8,7 @@ namespace MusicApp.DAL.Models
         public string Name { get; set; }
         public string Bio { get; set; }
 
-        public ICollection<Track> Tracks { get; set; } = new List<Track>();
+        public ICollection<TrackArtist> TrackArtists { get; set; } = new List<TrackArtist>();
         public ICollection<Album> Albums { get; set; } = new List<Album>();
     }
 }

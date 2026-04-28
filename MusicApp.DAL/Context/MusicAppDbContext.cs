@@ -11,6 +11,7 @@ namespace MusicApp.DAL.Context
         public DbSet<Track> Tracks { get; set; }
         public DbSet<Playlist> Playlists { get; set; }
         public DbSet<PlaylistTrack> PlaylistTracks { get; set; }
+        public DbSet<TrackArtist> TrackArtists { get; set; }
 
         public MusicAppDbContext(DbContextOptions<MusicAppDbContext> options) : base(options) { }
 
@@ -34,7 +35,7 @@ namespace MusicApp.DAL.Context
                 e.Property(a => a.Bio).HasMaxLength(2000);
             });
 
-            // Album
+            // Album (один основной исполнитель альбома)
             modelBuilder.Entity<Album>(e =>
             {
                 e.HasKey(a => a.AlbumId);
@@ -53,15 +54,12 @@ namespace MusicApp.DAL.Context
                 e.Property(t => t.Genre).HasMaxLength(100);
                 e.Property(t => t.FilePath).HasMaxLength(500);
 
-                e.HasOne(t => t.Artist)
-                 .WithMany(a => a.Tracks)
-                 .HasForeignKey(t => t.ArtistId)
-                 .OnDelete(DeleteBehavior.Restrict);
-
+                // Связь с альбомом (может быть null)
                 e.HasOne(t => t.Album)
                  .WithMany(a => a.Tracks)
                  .HasForeignKey(t => t.AlbumId)
                  .OnDelete(DeleteBehavior.SetNull);
+
             });
 
             // Playlist
@@ -91,6 +89,22 @@ namespace MusicApp.DAL.Context
                  .WithMany(t => t.PlaylistTracks)
                  .HasForeignKey(pt => pt.TrackId)
                  .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // === Many-to-Many: Track <-> Artist ===
+            modelBuilder.Entity<TrackArtist>(entity =>
+            {
+                entity.HasKey(ta => new { ta.TrackId, ta.ArtistId });
+
+                entity.HasOne(ta => ta.Track)
+                      .WithMany(t => t.TrackArtists)
+                      .HasForeignKey(ta => ta.TrackId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(ta => ta.Artist)
+                      .WithMany(a => a.TrackArtists)
+                      .HasForeignKey(ta => ta.ArtistId)
+                      .OnDelete(DeleteBehavior.Cascade);
             });
         }
     }

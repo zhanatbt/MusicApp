@@ -19,7 +19,8 @@ namespace MusicApp.Forms
 
         // Поиск
         private TextBox _txtSearch;
-        private ComboBox _cmbGenre, _cmbArtist;
+        private ComboBox _cmbGenre;
+        private CheckedListBox _clbArtists;
         private Button _btnSearch, _btnClear;
 
         // Списки
@@ -40,15 +41,14 @@ namespace MusicApp.Forms
         private Button _btnPlayPause, _btnStop;
         private TrackBar _volumeTrackBar;
         private bool _isPaused = false;
-
         private PlayerForm? _playerForm;
 
         public MainForm(ITrackService trackSvc, IPlaylistService playlistSvc, PlayerForm? playerForm)
         {
             _trackSvc = trackSvc;
             _playlistSvc = playlistSvc;
-            InitializeComponent();        // Это вызов из Designer.cs
-            InitializeCustomComponents(); // Наша ручная инициализация
+            InitializeComponent();
+            InitializeCustomComponents();
             _playerForm = playerForm;
         }
 
@@ -59,18 +59,15 @@ namespace MusicApp.Forms
             RefreshAll();
         }
 
-        /// <summary>
-        /// Здесь размещаем весь код создания элементов управления
-        /// </summary>
         private void InitializeCustomComponents()
         {
-            this.Size = new Size(1220, 760);
-            this.MinimumSize = new Size(1000, 680);
+            this.Size = new Size(1250, 760);
+            this.MinimumSize = new Size(1050, 700);
 
             var main = new SplitContainer
             {
                 Dock = DockStyle.Fill,
-                SplitterDistance = 670
+                SplitterDistance = 680
             };
 
             // ===================== Левая панель =====================
@@ -79,27 +76,44 @@ namespace MusicApp.Forms
             var searchPanel = new FlowLayoutPanel
             {
                 Dock = DockStyle.Top,
-                Height = 80,
+                Height = 110,
                 FlowDirection = FlowDirection.LeftToRight,
                 WrapContents = true,
                 Padding = new Padding(3)
             };
 
-            _txtSearch = new TextBox { PlaceholderText = "Название / исполнитель / альбом", Width = 250, Height = 30 };
+            _txtSearch = new TextBox { PlaceholderText = "Название трека...", Width = 250, Height = 30 };
             _cmbGenre = new ComboBox { Width = 140, DropDownStyle = ComboBoxStyle.DropDownList };
-            _cmbArtist = new ComboBox { Width = 170, DropDownStyle = ComboBoxStyle.DropDownList };
+
+            _clbArtists = new CheckedListBox
+            {
+                Width = 220,
+                Height = 90,
+                CheckOnClick = true
+            };
+
             _btnSearch = new Button { Text = "🔍 Поиск", Width = 95, Height = 30 };
             _btnClear = new Button { Text = "✕ Сброс", Width = 80, Height = 30 };
 
             _btnSearch.Click += OnSearch;
             _btnClear.Click += ClearSearch;
 
-            searchPanel.Controls.AddRange(new Control[] { _txtSearch, _cmbGenre, _cmbArtist, _btnSearch, _btnClear });
+            searchPanel.Controls.AddRange(new Control[]
+            {
+                new Label { Text = "Поиск:", Width = 50, TextAlign = ContentAlignment.MiddleLeft },
+                _txtSearch,
+                new Label { Text = "Жанр:", Width = 50, TextAlign = ContentAlignment.MiddleLeft },
+                _cmbGenre,
+                new Label { Text = "Исполнители:", Width = 80, TextAlign = ContentAlignment.MiddleLeft },
+                _clbArtists,
+                _btnSearch,
+                _btnClear
+            });
 
             _dgvTracks = CreateGrid();
             _dgvTracks.Columns.AddRange(
-                new DataGridViewTextBoxColumn { HeaderText = "Название", DataPropertyName = "Title", Width = 210 },
-                new DataGridViewTextBoxColumn { HeaderText = "Исполнитель", DataPropertyName = "ArtistName", Width = 170 },
+                new DataGridViewTextBoxColumn { HeaderText = "Название", DataPropertyName = "Title", Width = 220 },
+                new DataGridViewTextBoxColumn { HeaderText = "Исполнители", DataPropertyName = "ArtistsDisplay", Width = 200 },
                 new DataGridViewTextBoxColumn { HeaderText = "Альбом", DataPropertyName = "AlbumTitle", Width = 160 },
                 new DataGridViewTextBoxColumn { HeaderText = "Жанр", DataPropertyName = "Genre", Width = 110 },
                 new DataGridViewTextBoxColumn { HeaderText = "Длит.", DataPropertyName = "DurationFormatted", Width = 70 }
@@ -108,16 +122,15 @@ namespace MusicApp.Forms
             leftPanel.Controls.Add(_dgvTracks);
             leftPanel.Controls.Add(searchPanel);
 
-            // ===================== ПРАВАЯ ПАНЕЛЬ =====================
+            // ===================== Правая панель =====================
             var rightPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(8) };
 
-            // 1. Верхняя панель (комбобокс + кнопки управления плейлистом)
+            // Верхняя панель плейлистов
             var plHeader = new FlowLayoutPanel
             {
                 Dock = DockStyle.Top,
                 Height = 50,
                 FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = true,
                 Padding = new Padding(2)
             };
 
@@ -133,15 +146,15 @@ namespace MusicApp.Forms
 
             plHeader.Controls.AddRange(new Control[] { _cmbPlaylists, _btnNewPlaylist, _btnDeletePlaylist, _btnAddToPlaylist });
 
-            // 2. Сетка плейлиста
+            // Сетка плейлиста
             _dgvPlaylist = CreateGrid();
             _dgvPlaylist.Columns.AddRange(
                 new DataGridViewTextBoxColumn { HeaderText = "Название", DataPropertyName = "Title", Width = 190 },
-                new DataGridViewTextBoxColumn { HeaderText = "Исполнитель", DataPropertyName = "ArtistName", Width = 160 },
+                new DataGridViewTextBoxColumn { HeaderText = "Исполнители", DataPropertyName = "ArtistsDisplay", Width = 190 },
                 new DataGridViewTextBoxColumn { HeaderText = "Длит.", DataPropertyName = "DurationFormatted", Width = 70 }
             );
 
-            // 3. Панель действий (Удалить + Воспроизвести плейлист)
+            // Панель действий
             var actionsPanel = new FlowLayoutPanel
             {
                 Dock = DockStyle.Bottom,
@@ -169,11 +182,11 @@ namespace MusicApp.Forms
             };
 
             _btnRemoveFromPlaylist.Click += OnRemoveFromPlaylist;
-            btnPlayPlaylist.Click += OnPlayWholePlaylist;   // новая кнопка
+            btnPlayPlaylist.Click += OnPlayWholePlaylist;
 
             actionsPanel.Controls.AddRange(new Control[] { _btnRemoveFromPlaylist, btnPlayPlaylist });
 
-            // 4. Панель плеера (Пауза, Стоп, громкость)
+            // Панель плеера
             var playerPanel = new FlowLayoutPanel
             {
                 Dock = DockStyle.Bottom,
@@ -193,7 +206,6 @@ namespace MusicApp.Forms
 
             playerPanel.Controls.AddRange(new Control[] { _btnPlayPause, _btnStop, lblVolume, _volumeTrackBar });
 
-            // 5. Надпись "Сейчас играет"
             _lblNowPlaying = new Label
             {
                 Dock = DockStyle.Bottom,
@@ -202,29 +214,22 @@ namespace MusicApp.Forms
                 Font = new Font("Segoe UI", 10f, FontStyle.Italic)
             };
 
-            // === КРИТИЧНО ВАЖНЫЙ ПОРЯДОК ДОБАВЛЕНИЯ ===
-            rightPanel.Controls.Add(_dgvPlaylist);     // Fill первым!
-            rightPanel.Controls.Add(plHeader);         // Top
-            rightPanel.Controls.Add(actionsPanel);     // Bottom
-            rightPanel.Controls.Add(playerPanel);      // Bottom
-            rightPanel.Controls.Add(_lblNowPlaying);   // Bottom
+            // Порядок добавления важен!
+            rightPanel.Controls.Add(_dgvPlaylist);
+            rightPanel.Controls.Add(plHeader);
+            rightPanel.Controls.Add(actionsPanel);
+            rightPanel.Controls.Add(playerPanel);
+            rightPanel.Controls.Add(_lblNowPlaying);
 
             main.Panel1.Controls.Add(leftPanel);
             main.Panel2.Controls.Add(rightPanel);
             this.Controls.Add(main);
 
-            // Двойной клик
+            // Двойной клик по треку
             _dgvTracks.CellDoubleClick += (s, e) => PlaySelectedTrack(_dgvTracks);
             _dgvPlaylist.CellDoubleClick += (s, e) => PlaySelectedTrack(_dgvPlaylist);
         }
 
-        private void VolumeChanged(object sender, EventArgs e)
-        {
-            if (_waveOut != null)
-                _waveOut.Volume = _volumeTrackBar.Value / 100f;
-        }
-
-        // Остальные методы (RefreshAll, LoadTracks, обработчики и т.д.) остаются теми же
         private void RefreshAll()
         {
             LoadTracks();
@@ -238,17 +243,16 @@ namespace MusicApp.Forms
         private void LoadFilters()
         {
             var genres = _trackSvc.GetAllGenres();
-            var artists = Program.Services.GetRequiredService<IArtistService>().GetAll();
+            var artists = Program.Services.GetRequiredService<IArtistService>().GetAll().OrderBy(a => a.Name).ToList();
 
             _cmbGenre.Items.Clear();
             _cmbGenre.Items.Add("— Жанр —");
             genres.ForEach(g => _cmbGenre.Items.Add(g));
             _cmbGenre.SelectedIndex = 0;
 
-            _cmbArtist.Items.Clear();
-            _cmbArtist.Items.Add("— Исполнитель —");
-            artists.ForEach(a => _cmbArtist.Items.Add(a.Name));
-            _cmbArtist.SelectedIndex = 0;
+            _clbArtists.Items.Clear();
+            foreach (var artist in artists)
+                _clbArtists.Items.Add(artist, false);
         }
 
         private void LoadPlaylists()
@@ -271,15 +275,25 @@ namespace MusicApp.Forms
         private void OnSearch(object sender, EventArgs e)
         {
             string? genre = _cmbGenre.SelectedIndex > 0 ? _cmbGenre.SelectedItem?.ToString() : null;
-            string? artist = _cmbArtist.SelectedIndex > 0 ? _cmbArtist.SelectedItem?.ToString() : null;
-            LoadTracks(_trackSvc.Search(_txtSearch.Text.Trim(), artist, null, genre));
+            var selectedArtistIds = _clbArtists.CheckedItems.Cast<ArtistDto>().Select(a => a.ArtistId).ToList();
+
+            var tracks = _trackSvc.Search(_txtSearch.Text.Trim(), null, null, genre);
+
+            if (selectedArtistIds.Any())
+            {
+                tracks = tracks.Where(t => t.ArtistIds.Intersect(selectedArtistIds).Any()).ToList();
+            }
+
+            LoadTracks(tracks);
         }
 
         private void ClearSearch(object sender, EventArgs e)
         {
             _txtSearch.Clear();
             _cmbGenre.SelectedIndex = 0;
-            _cmbArtist.SelectedIndex = 0;
+            for (int i = 0; i < _clbArtists.Items.Count; i++)
+                _clbArtists.SetItemChecked(i, false);
+
             LoadTracks();
         }
 
@@ -322,6 +336,7 @@ namespace MusicApp.Forms
                 MessageBox.Show("Сначала выберите плейлист.");
                 return;
             }
+
             _playlistSvc.AddTrack(plId, track.TrackId);
             LoadPlaylistTracks(plId);
         }
@@ -330,6 +345,7 @@ namespace MusicApp.Forms
         {
             if (_dgvPlaylist.CurrentRow?.DataBoundItem is not PlaylistTrackItemDto item) return;
             _playlistSvc.RemoveTrack(item.PlaylistTrackId);
+
             if (_cmbPlaylists.SelectedValue is int plId)
                 LoadPlaylistTracks(plId);
         }
@@ -337,17 +353,17 @@ namespace MusicApp.Forms
         private void PlaySelectedTrack(DataGridView grid)
         {
             if (grid.CurrentRow?.DataBoundItem is TrackDto track)
-                PlayInPlayerWindow(track.FilePath, track.ArtistName, track.Title);
+                PlayInPlayerWindow(track.FilePath, track.ArtistsDisplay, track.Title);
             else if (grid.CurrentRow?.DataBoundItem is PlaylistTrackItemDto ptrack)
-                PlayInPlayerWindow(ptrack.FilePath, ptrack.ArtistName, ptrack.Title);
+                PlayInPlayerWindow(ptrack.FilePath, ptrack.ArtistsDisplay, ptrack.Title);
         }
 
-        private void PlayInPlayerWindow(string filePath, string title, string artist)
+        private void PlayInPlayerWindow(string filePath, string artistDisplay, string title)
         {
             if (_playerForm == null || _playerForm.IsDisposed)
                 _playerForm = new PlayerForm();
 
-            _playerForm.Play(filePath, title, artist);
+            _playerForm.Play(filePath, title, artistDisplay);
             _playerForm.Show();
             _playerForm.BringToFront();
         }
@@ -387,27 +403,10 @@ namespace MusicApp.Forms
             _isPaused = false;
         }
 
-        protected override void OnFormClosing(FormClosingEventArgs e)
+        private void VolumeChanged(object sender, EventArgs e)
         {
-            StopPlayback();
-            base.OnFormClosing(e);
-        }
-
-        private static DataGridView CreateGrid()
-        {
-            var g = new DataGridView
-            {
-                Dock = DockStyle.Fill,
-                ReadOnly = true,
-                AllowUserToAddRows = false,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None,
-                RowHeadersVisible = false,
-                BackgroundColor = SystemColors.Window
-            };
-            g.EnableHeadersVisualStyles = false;
-            g.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(240, 240, 245);
-            return g;
+            if (_waveOut != null)
+                _waveOut.Volume = _volumeTrackBar.Value / 100f;
         }
 
         private void OnPlayWholePlaylist(object sender, EventArgs e)
@@ -437,13 +436,36 @@ namespace MusicApp.Forms
                 _waveOut.Init(_audioFileReader);
                 _waveOut.Play();
 
-                _lblNowPlaying.Text = $"▶ Плейлист: {tracksWithFile[0].ArtistName} — {tracksWithFile[0].Title}";
+                _lblNowPlaying.Text = $"▶ Плейлист: {tracksWithFile[0].ArtistsDisplay} — {tracksWithFile[0].Title}";
                 _btnPlayPause.Text = "⏸ Пауза";
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Ошибка: " + ex.Message);
             }
+        }
+
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            StopPlayback();
+            base.OnFormClosing(e);
+        }
+
+        private static DataGridView CreateGrid()
+        {
+            var g = new DataGridView
+            {
+                Dock = DockStyle.Fill,
+                ReadOnly = true,
+                AllowUserToAddRows = false,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None,
+                RowHeadersVisible = false,
+                BackgroundColor = SystemColors.Window
+            };
+            g.EnableHeadersVisualStyles = false;
+            g.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(240, 240, 245);
+            return g;
         }
     }
 }
